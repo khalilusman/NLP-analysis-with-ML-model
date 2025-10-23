@@ -1,0 +1,805 @@
+// const API_URL = 'http://localhost:8000';
+// let questions = [];
+// let currentQuestionIndex = 0;
+// let answers = {};
+// let companyName = '';
+// let isSubmitting = false;
+// let assessmentComplete = false; // NEW: Flag to stop everything after results
+// const chatContainer = document.getElementById('chatContainer');
+
+// // Initialize on page load
+// window.addEventListener('DOMContentLoaded', function() {
+//     console.log("🎬 DOMContentLoaded event fired");
+//     init();
+// });
+
+// // Prevent ANY page reloads
+// window.addEventListener('beforeunload', function(e) {
+//     if (assessmentComplete && !window.manualReload) {
+//         console.log("⚠️ Someone tried to reload the page!");
+//         e.preventDefault();
+//         e.returnValue = '';
+//         return "Results are displayed. Are you sure you want to leave?";
+//     }
+// });
+
+// // Log any location changes
+// const originalReload = window.location.reload;
+// window.location.reload = function() {
+//     console.log("🚨 window.location.reload() was called!");
+//     console.trace(); // Show call stack
+//     if (!window.manualReload) {
+//         console.error("❌ UNAUTHORIZED RELOAD BLOCKED!");
+//         return;
+//     }
+//     originalReload.call(window.location);
+// };
+
+// async function init() {
+//     console.log("🎬 init() called - Initializing chatbot...");
+//     console.log("Current state: assessmentComplete =", assessmentComplete);
+    
+//     // If assessment is already complete, DON'T reinitialize
+//     if (assessmentComplete) {
+//         console.log("🛑 Assessment already complete - BLOCKING re-initialization");
+//         return;
+//     }
+    
+//     try {
+//         const response = await fetch(`${API_URL}/questions`);
+//         const data = await response.json();
+//         questions = data.questions;
+        
+//         console.log(`✅ Loaded ${questions.length} questions`);
+        
+//         addAssistantMessage("Hello! I'm your Risk Assessment Assistant.");
+        
+//         setTimeout(() => {
+//             addAssistantMessage("I'll help you identify potential risks for your organization. Let's get started!");
+//             setTimeout(() => askNextQuestion(), 1000);
+//         }, 1500);
+        
+//     } catch (error) {
+//         console.error('❌ Error loading questions:', error);
+//         addAssistantMessage("I'm having trouble connecting to the server. Please ensure the backend is running on http://localhost:8000");
+//     }
+// }
+
+// function addAssistantMessage(text) {
+//     console.log("💬 addAssistantMessage called:", text.substring(0, 50));
+//     const messageDiv = document.createElement('div');
+//     messageDiv.className = 'message assistant';
+//     messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+//     chatContainer.appendChild(messageDiv);
+//     scrollToBottom();
+// }
+
+// function addUserMessage(text) {
+//     console.log("👤 addUserMessage called:", text.substring(0, 50));
+//     const messageDiv = document.createElement('div');
+//     messageDiv.className = 'message user';
+//     messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+//     chatContainer.appendChild(messageDiv);
+//     scrollToBottom();
+// }
+
+// function showTyping() {
+//     const typingDiv = document.createElement('div');
+//     typingDiv.className = 'message assistant';
+//     typingDiv.id = 'typing';
+//     typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+//     chatContainer.appendChild(typingDiv);
+//     scrollToBottom();
+// }
+
+// function hideTyping() {
+//     const typing = document.getElementById('typing');
+//     if (typing) typing.remove();
+// }
+
+// function scrollToBottom() {
+//     chatContainer.scrollTop = chatContainer.scrollHeight;
+// }
+
+// function askNextQuestion() {
+//     // CRITICAL: Stop if assessment is complete
+//     if (assessmentComplete) {
+//         console.log("🛑 ASSESSMENT COMPLETE - BLOCKING NEW QUESTIONS");
+//         return;
+//     }
+    
+//     console.log(`📝 Question ${currentQuestionIndex + 1}/${questions.length}`);
+    
+//     if (isSubmitting) {
+//         console.log("⛔ Submission in progress, blocking");
+//         return;
+//     }
+    
+//     if (currentQuestionIndex >= questions.length) {
+//         console.log("🎯 All questions answered, submitting...");
+//         submitSurvey();
+//         return;
+//     }
+    
+//     const question = questions[currentQuestionIndex];
+//     showTyping();
+    
+//     setTimeout(() => {
+//         // DOUBLE CHECK before displaying
+//         if (assessmentComplete) {
+//             console.log("🛑 Assessment completed during timeout - aborting");
+//             hideTyping();
+//             return;
+//         }
+//         hideTyping();
+//         displayQuestion(question);
+//     }, 800);
+// }
+
+// function displayQuestion(question) {
+//     const messageDiv = document.createElement('div');
+//     messageDiv.className = 'message assistant';
+    
+//     const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+//     let content = `<div class="message-content">${question.question}`;
+//     content += `<div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>`;
+//     content += `<div class="progress-text">Question ${currentQuestionIndex + 1} of ${questions.length}</div>`;
+
+//     if (question.type === 'radio') {
+//         content += '<div class="options-container">';
+//         question.options.forEach(option => {
+//             content += `<button class="option-btn" data-type="radio" data-key="${question.key}" data-value="${option}">${option}</button>`;
+//         });
+//         content += '</div>';
+//     } else if (question.type === 'text') {
+//         content += `<div class="text-input-container">
+//             <input type="text" class="text-input" id="text-${question.key}" placeholder="Type your answer...">
+//             <button class="submit-btn" data-type="text" data-key="${question.key}">Submit</button>
+//         </div>`;
+//     } else if (question.type === 'scale') {
+//         content += '<div class="scale-container">';
+//         for (let i = question.scale.min; i <= question.scale.max; i++) {
+//             content += `<button class="scale-btn" data-type="scale" data-key="${question.key}" data-value="${i}">${i}</button>`;
+//         }
+//         content += '</div>';
+//     } else if (question.type === 'scale_multiple') {
+//         content += '<div class="scale-multiple-container">';
+//         question.sub_questions.forEach(sq => {
+//             content += `<div class="scale-question">
+//                 <label class="scale-question-label">${sq.label}</label>
+//                 <div class="scale-container" id="scale-${sq.key}">`;
+//             for (let i = question.scale.min; i <= question.scale.max; i++) {
+//                 content += `<button class="scale-btn" data-subkey="${sq.key}" data-value="${i}">${i}</button>`;
+//             }
+//             content += '</div></div>';
+//         });
+//         content += '</div>';
+//         content += `<button class="submit-btn" data-type="scale_multiple" data-key="${question.key}">Continue</button>`;
+//     }
+
+//     content += '</div>';
+//     messageDiv.innerHTML = content;
+//     chatContainer.appendChild(messageDiv);
+//     scrollToBottom();
+    
+//     // Attach event listeners
+//     attachEventListeners(question);
+// }
+
+// function attachEventListeners(question) {
+//     const buttons = chatContainer.querySelectorAll('button[data-type]');
+    
+//     buttons.forEach(btn => {
+//         btn.addEventListener('click', function(e) {
+//             e.preventDefault();
+//             e.stopPropagation();
+            
+//             if (isSubmitting) return;
+            
+//             const type = this.getAttribute('data-type');
+//             const key = this.getAttribute('data-key');
+//             const value = this.getAttribute('data-value');
+            
+//             console.log(`🖱️ Clicked: ${type} - ${key} = ${value}`);
+            
+//             if (type === 'radio') {
+//                 handleRadioAnswer(key, value);
+//             } else if (type === 'text') {
+//                 handleTextAnswer(key);
+//             } else if (type === 'scale') {
+//                 handleScaleAnswer(key, parseInt(value));
+//             } else if (type === 'scale_multiple') {
+//                 handleScaleMultipleAnswer(key, question.sub_questions);
+//             }
+//         });
+//     });
+    
+//     // For scale_multiple, handle selection highlighting
+//     if (question.type === 'scale_multiple') {
+//         const scaleButtons = chatContainer.querySelectorAll('.scale-btn[data-subkey]');
+//         scaleButtons.forEach(btn => {
+//             btn.addEventListener('click', function(e) {
+//                 e.stopPropagation();
+//                 const subkey = this.getAttribute('data-subkey');
+//                 const container = document.getElementById(`scale-${subkey}`);
+//                 container.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+//                 this.classList.add('selected');
+//             });
+//         });
+//     }
+// }
+
+// function handleRadioAnswer(key, value) {
+//     if (assessmentComplete) {
+//         console.log("🛑 Assessment complete - ignoring input");
+//         return;
+//     }
+//     answers[key] = value;
+//     if (key === 'company_name') companyName = value || 'Anonymous Company';
+//     addUserMessage(value);
+//     currentQuestionIndex++;
+//     askNextQuestion();
+// }
+
+// function handleTextAnswer(key) {
+//     if (assessmentComplete) {
+//         console.log("🛑 Assessment complete - ignoring input");
+//         return;
+//     }
+//     const input = document.getElementById(`text-${key}`);
+//     const value = input.value.trim();
+//     if (!value) {
+//         alert('Please enter an answer');
+//         return;
+//     }
+//     answers[key] = value;
+//     if (key === 'company_name') companyName = value;
+//     addUserMessage(value);
+//     currentQuestionIndex++;
+//     askNextQuestion();
+// }
+
+// function handleScaleAnswer(key, value) {
+//     if (assessmentComplete) {
+//         console.log("🛑 Assessment complete - ignoring input");
+//         return;
+//     }
+//     answers[key] = value;
+//     addUserMessage(`Selected: ${value}`);
+//     currentQuestionIndex++;
+//     askNextQuestion();
+// }
+
+// function handleScaleMultipleAnswer(key, subQuestions) {
+//     if (assessmentComplete) {
+//         console.log("🛑 Assessment complete - ignoring input");
+//         return;
+//     }
+    
+//     const scaleAnswers = {};
+//     let allAnswered = true;
+
+//     subQuestions.forEach(sq => {
+//         const selectedBtn = document.querySelector(`#scale-${sq.key} .scale-btn.selected`);
+//         if (selectedBtn) {
+//             scaleAnswers[sq.key] = parseInt(selectedBtn.getAttribute('data-value'));
+//         } else {
+//             allAnswered = false;
+//         }
+//     });
+
+//     if (!allAnswered) {
+//         alert('Please rate all items');
+//         return;
+//     }
+
+//     answers[key] = scaleAnswers;
+//     const summary = subQuestions.map(sq => `${sq.label}: ${scaleAnswers[sq.key]}`).join(', ');
+//     addUserMessage(summary);
+//     currentQuestionIndex++;
+//     askNextQuestion();
+// }
+
+// async function submitSurvey() {
+//     if (isSubmitting) {
+//         console.log("⛔ Already submitting");
+//         return;
+//     }
+    
+//     if (assessmentComplete) {
+//         console.log("🛑 Assessment already complete");
+//         return;
+//     }
+    
+//     isSubmitting = true;
+//     assessmentComplete = true; // LOCK IMMEDIATELY - NEVER ASK QUESTIONS AGAIN
+//     console.log("=== 🚀 SUBMITTING SURVEY ===");
+//     console.log("🔒 Assessment marked as COMPLETE");
+    
+//     // Disable all buttons permanently
+//     document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+    
+//     addAssistantMessage("Thank you for completing the assessment. Analyzing your responses...");
+//     showTyping();
+    
+//     try {
+//         console.log("📤 Sending to backend...");
+        
+//         const response = await fetch(`${API_URL}/predict`, {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({ 
+//                 company_name: companyName || "Anonymous Company", 
+//                 answers: answers 
+//             })
+//         });
+        
+//         console.log(`📥 Response status: ${response.status}`);
+        
+//         if (!response.ok) {
+//             const errorData = await response.json();
+//             console.error("❌ Error:", errorData);
+//             hideTyping();
+//             addAssistantMessage(`Error: ${errorData.detail || 'Failed to get prediction'}`);
+//             return;
+//         }
+        
+//         const result = await response.json();
+//         console.log("✅ Got result:", result);
+        
+//         hideTyping();
+//         displayResults(result);
+        
+//     } catch (error) {
+//         hideTyping();
+//         console.error('❌ Fetch error:', error);
+//         addAssistantMessage("An error occurred. Please try again.");
+//     }
+// }
+
+// function displayResults(result) {
+//     console.log("📊 DISPLAYING RESULTS - THIS IS THE END");
+//     console.log("🛑 NO MORE QUESTIONS WILL BE ASKED");
+    
+//     const messageDiv = document.createElement('div');
+//     messageDiv.className = 'message assistant';
+
+//     const confidencePercent = result.confidence 
+//         ? (result.confidence * 100).toFixed(1) 
+//         : 'N/A';
+
+//     let content = `
+//         <div class="message-content">
+//             <div class="result-card">
+//                 <h3>✅ Risk Assessment Complete</h3>
+//                 <p><strong>Predicted Risk:</strong> ${result.predicted_risk || 'Unknown'}</p>
+//                 <br>
+//                 <p><strong>💡 AI Recommendation:</strong></p>
+//                 <p>${result.advice || 'No advice available'}</p>
+//             </div>
+//             <p style="margin-top: 20px; color: #8e8ea0; font-size: 14px;">
+//                 Assessment complete. Refresh the page to start a new assessment.
+//             </p>
+//             <button class="submit-btn" id="restartBtn" style="background: #10a37f; margin-top: 16px;">
+//                 🔄 Start New Assessment
+//             </button>
+//         </div>
+//     `;
+
+//     messageDiv.innerHTML = content;
+//     chatContainer.appendChild(messageDiv);
+//     scrollToBottom();
+    
+//     console.log("✅ RESULTS DISPLAYED");
+//     console.log("⏹️ CHATBOT STOPPED - Session ended");
+    
+//     // ONLY restart when button is clicked
+//     setTimeout(() => {
+//         const restartBtn = document.getElementById('restartBtn');
+//         if (restartBtn) {
+//             restartBtn.disabled = false;
+//             restartBtn.addEventListener('click', function(e) {
+//                 e.preventDefault();
+//                 e.stopPropagation();
+//                 console.log("🔄 User manually clicked restart button");
+//                 window.manualReload = true; // Flag to allow reload
+//                 window.location.reload();
+//             });
+//         }
+//     }, 100);
+// }
+
+
+
+
+
+
+
+
+
+const API_URL = 'http://127.0.0.1:8000';
+let questions = [];
+let currentQuestionIndex = 0;
+let answers = {};
+let companyName = '';
+let isSubmitting = false;
+let assessmentComplete = false;
+const chatContainer = document.getElementById('chatContainer');
+
+// Prevent unauthorized reloads
+window.addEventListener('beforeunload', function(e) {
+    if (assessmentComplete && !window.manualReload) {
+        e.preventDefault();
+        e.returnValue = '';
+        return "Results are displayed. Are you sure you want to leave?";
+    }
+});
+
+window.addEventListener('DOMContentLoaded', function() {
+    console.log("🎬 NLP Chatbot initializing...");
+    init();
+});
+
+async function init() {
+    console.log("🤖 Loading NLP-powered questions...");
+    
+    if (assessmentComplete) {
+        console.log("🛑 Assessment already complete");
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/questions`);
+        const data = await response.json();
+        questions = data.questions;
+        
+        console.log(`✅ Loaded ${questions.length} questions`);
+        
+        addAssistantMessage("Hello! 👋 I'm your AI-powered Risk Assessment Assistant.");
+        
+        setTimeout(() => {
+            addAssistantMessage("I'll have a conversation with you to understand your company's situation. Feel free to answer in your own words - I use Natural Language Processing to analyze your responses.");
+            setTimeout(() => askNextQuestion(), 1500);
+        }, 2000);
+        
+    } catch (error) {
+        console.error('❌ Error loading questions:', error);
+        addAssistantMessage("I'm having trouble connecting. Please ensure the NLP backend is running on http://localhost:8000");
+    }
+}
+
+function addAssistantMessage(text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant';
+    messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+function addUserMessage(text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message user';
+    messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+function showTyping() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message assistant';
+    typingDiv.id = 'typing';
+    typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    chatContainer.appendChild(typingDiv);
+    scrollToBottom();
+}
+
+function hideTyping() {
+    const typing = document.getElementById('typing');
+    if (typing) typing.remove();
+}
+
+function scrollToBottom() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function askNextQuestion() {
+    if (assessmentComplete) {
+        console.log("🛑 Assessment complete - blocking");
+        return;
+    }
+    
+    console.log(`📝 Question ${currentQuestionIndex + 1}/${questions.length}`);
+    
+    if (isSubmitting) {
+        console.log("⛔ Submission in progress");
+        return;
+    }
+    
+    if (currentQuestionIndex >= questions.length) {
+        console.log("🎯 All questions answered, submitting to NLP backend...");
+        submitToNLP();
+        return;
+    }
+    
+    const question = questions[currentQuestionIndex];
+    showTyping();
+    
+    setTimeout(() => {
+        if (assessmentComplete) {
+            hideTyping();
+            return;
+        }
+        hideTyping();
+        displayQuestion(question);
+    }, 800);
+}
+
+function displayQuestion(question) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant';
+    
+    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+    let content = `<div class="message-content">${question.question}`;
+    content += `<div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>`;
+    content += `<div class="progress-text">Question ${currentQuestionIndex + 1} of ${questions.length}</div>`;
+
+    if (question.type === 'text' || question.type === 'text_long') {
+        const rows = question.type === 'text_long' ? 4 : 1;
+        const placeholder = question.placeholder || "Type your answer...";
+        
+        content += `<div class="text-input-container">
+            <textarea 
+                class="text-input text-area" 
+                id="text-${question.key}" 
+                rows="${rows}"
+                placeholder="${placeholder}"
+                style="resize: vertical; min-height: ${rows * 30}px;"
+            ></textarea>
+            <button class="submit-btn" data-type="text" data-key="${question.key}">Continue</button>
+        </div>`;
+    } else if (question.type === 'scale_multiple') {
+        content += '<div class="scale-multiple-container">';
+        question.sub_questions.forEach(sq => {
+            content += `<div class="scale-question">
+                <label class="scale-question-label">${sq.label}</label>
+                <div class="scale-container" id="scale-${sq.key}">`;
+            for (let i = question.scale.min; i <= question.scale.max; i++) {
+                content += `<button class="scale-btn" data-subkey="${sq.key}" data-value="${i}">${i}</button>`;
+            }
+            content += '</div></div>';
+        });
+        content += '</div>';
+        content += `<button class="submit-btn" data-type="scale_multiple" data-key="${question.key}">Continue</button>`;
+    }
+
+    content += '</div>';
+    messageDiv.innerHTML = content;
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    attachEventListeners(question);
+}
+
+function attachEventListeners(question) {
+    const buttons = chatContainer.querySelectorAll('button[data-type]');
+    
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (assessmentComplete) return;
+            
+            const type = this.getAttribute('data-type');
+            const key = this.getAttribute('data-key');
+            
+            if (type === 'text') {
+                handleTextAnswer(key);
+            } else if (type === 'scale_multiple') {
+                handleScaleMultipleAnswer(key, question.sub_questions);
+            }
+        });
+    });
+    
+    if (question.type === 'scale_multiple') {
+        const scaleButtons = chatContainer.querySelectorAll('.scale-btn[data-subkey]');
+        scaleButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const subkey = this.getAttribute('data-subkey');
+                const container = document.getElementById(`scale-${subkey}`);
+                container.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+    }
+}
+
+function handleTextAnswer(key) {
+    if (assessmentComplete) return;
+    
+    const input = document.getElementById(`text-${key}`);
+    const value = input.value.trim();
+    
+    if (!value) {
+        alert('Please enter an answer');
+        return;
+    }
+    
+    answers[key] = value;
+    if (key === 'company_name') companyName = value;
+    
+    // Show shortened version in chat
+    const displayText = value.length > 100 ? value.substring(0, 100) + "..." : value;
+    addUserMessage(displayText);
+    
+    currentQuestionIndex++;
+    askNextQuestion();
+}
+
+function handleScaleMultipleAnswer(key, subQuestions) {
+    if (assessmentComplete) return;
+    
+    const scaleAnswers = {};
+    let allAnswered = true;
+
+    subQuestions.forEach(sq => {
+        const selectedBtn = document.querySelector(`#scale-${sq.key} .scale-btn.selected`);
+        if (selectedBtn) {
+            scaleAnswers[sq.key] = parseInt(selectedBtn.getAttribute('data-value'));
+        } else {
+            allAnswered = false;
+        }
+    });
+
+    if (!allAnswered) {
+        alert('Please rate all items');
+        return;
+    }
+
+    answers[key] = scaleAnswers;
+    const summary = subQuestions.map(sq => `${sq.label}: ${scaleAnswers[sq.key]}`).join(', ');
+    addUserMessage(summary);
+    
+    currentQuestionIndex++;
+    askNextQuestion();
+}
+
+async function submitToNLP() {
+    if (isSubmitting || assessmentComplete) {
+        console.log("⛔ Already submitted");
+        return;
+    }
+    
+    isSubmitting = true;
+    assessmentComplete = true;
+    console.log("=== 🚀 SUBMITTING TO NLP BACKEND ===");
+    
+    document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+    
+    addAssistantMessage("Thank you! 🤖 I'm now analyzing your responses using Natural Language Processing...");
+    showTyping();
+    
+    try {
+        // Separate text and structured responses
+        const textResponses = {};
+        const structuredData = {};
+        
+        for (const [key, value] of Object.entries(answers)) {
+            if (typeof value === 'string' && value.length > 20) {
+                textResponses[key] = value;
+            } else {
+                structuredData[key] = value;
+            }
+        }
+        
+        console.log("📤 Text responses:", Object.keys(textResponses).length);
+        console.log("📊 Structured data:", Object.keys(structuredData).length);
+        
+        const response = await fetch(`${API_URL}/predict-nlp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                company_name: companyName || "Anonymous Company",
+                text_responses: textResponses,
+                structured_data: structuredData
+            })
+        });
+        
+        console.log(`📥 Response status: ${response.status}`);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("❌ Error:", errorData);
+            hideTyping();
+            addAssistantMessage(`Error: ${errorData.detail || 'NLP analysis failed'}`);
+            return;
+        }
+        
+        const result = await response.json();
+        console.log("✅ NLP Analysis complete:", result);
+        
+        hideTyping();
+        displayNLPResults(result);
+        
+    } catch (error) {
+        hideTyping();
+        console.error('❌ Fetch error:', error);
+        addAssistantMessage("An error occurred during NLP analysis. Please try again.");
+    }
+}
+
+function displayNLPResults(result) {
+    console.log("📊 DISPLAYING NLP RESULTS");
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant';
+
+    const confidencePercent = result.confidence 
+        ? (result.confidence * 100).toFixed(1) 
+        : 'N/A';
+    
+    const sentiment = result.sentiment_analysis;
+    const sentimentLabel = sentiment?.label || 'N/A';
+    const sentimentEmoji = sentimentLabel === 'POSITIVE' ? '😊' : sentimentLabel === 'NEGATIVE' ? '😟' : '😐';
+
+    let content = `
+        <div class="message-content">
+            <div class="result-card">
+                <h3>🤖 NLP Analysis Complete</h3>
+                
+                <p><strong>🎯 Predicted Risk:</strong> ${result.predicted_risk || 'Unknown'}</p>
+                <p><strong>📊 Confidence:</strong> ${confidencePercent}%</p>
+                
+                ${result.confidence ? `
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${confidencePercent}%"></div>
+                </div>
+                ` : ''}
+                
+                <br>
+                
+                <p><strong>${sentimentEmoji} Sentiment Analysis:</strong> ${sentimentLabel}</p>
+                ${sentiment?.polarity ? `<p style="font-size: 14px; color: #8e8ea0;">Polarity: ${sentiment.polarity.toFixed(2)} (${sentiment.polarity > 0 ? 'Optimistic' : 'Concerned'})</p>` : ''}
+                
+                ${result.risk_keywords && result.risk_keywords.length > 0 ? `
+                <br>
+                <p><strong>🔑 Key Topics Detected:</strong></p>
+                <p style="font-size: 14px; color: #c5c5d2;">${result.risk_keywords.slice(0, 8).join(', ')}</p>
+                ` : ''}
+                
+                <br>
+                <p><strong>💡 AI Recommendation:</strong></p>
+                <p>${result.advice || 'No advice available'}</p>
+            </div>
+            
+            <p style="margin-top: 20px; color: #8e8ea0; font-size: 14px; font-style: italic;">
+                ✨ This analysis was powered by Natural Language Processing, including sentiment analysis, keyword extraction, and zero-shot risk classification.
+            </p>
+            
+            <button class="submit-btn" id="restartBtn" style="background: #10a37f; margin-top: 16px;">
+                🔄 Start New Assessment
+            </button>
+        </div>
+    `;
+
+    messageDiv.innerHTML = content;
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    console.log("✅ NLP RESULTS DISPLAYED");
+    console.log("⏹️ CHATBOT STOPPED");
+    
+    setTimeout(() => {
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.disabled = false;
+            restartBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log("🔄 User clicked restart");
+                window.manualReload = true;
+                window.location.reload();
+            });
+        }
+    }, 100);
+}
